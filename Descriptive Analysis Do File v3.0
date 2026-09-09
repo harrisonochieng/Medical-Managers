@@ -1,0 +1,405 @@
+********START OF DO FILE ********
+
+**Insert the path to the stored data file
+use "C:\Users\ADMIN\Documents\hfa_endline.dta"
+
+*Drop non-Public facilities 
+drop if hcf_ownership=="Private Sector"
+drop if hcf_ownership=="Non-Governmental Organization"
+drop if hcf_ownership=="Faith Based Organization"
+
+
+*ACTIVE MONITORING AND REVIEW
+
+*Perceived ability of staff to carry out assingments
+
+tabulate assignments
+gen assignment_likert=0
+. replace assignment_likert=0 if assignments=="Strongly Disagree"
+. replace assignment_likert=0.25 if assignments=="Disagre"
+. replace assignment_likert=0.5 if assignments=="Neutral"
+. replace assignment_likert=0.75 if assignments=="Agree"
+. replace assignment_likert=1 if assignments=="Strongly Agree"
+
+*Staff encouraged to share new ideas
+tabulate new_ideas
+. gen ideas_likert=0
+. replace ideas_likert=0 if new_ideas=="Strongly Disagree"
+. replace ideas_likert=0.25 if new_ideas=="Disagre"
+. replace ideas_likert=0.5 if new_ideas=="Neutral"
+. replace ideas_likert=0.75 if new_ideas=="Strongly Agree"
+. replace ideas_likert=1 if new_ideas=="Agree"
+
+*Meetings to discuss routine service statistics 
+. gen audit_meeting=0
+. replace audit_meeting=0 if audit_meet=="No"
+. replace audit_meeting=0 if audit_meet=="I don't know"
+. replace audit_meeting=1 if audit_meet=="Yes"
+tabulate audit_meeting
+
+*Mechanism to report new disease outbreaks
+. gen data_outbreak=0
+. replace data_outbreak=0 if data_coll_method=="No"
+. replace data_outbreak=0 if data_coll_method=="I don't know"
+. replace data_outbreak=1 if data_coll_method=="Yes"
+tabulate data_outbreak
+
+*Data monitored and improving service delivery is valued
+tabulate data_monitor
+. gen data_monitoring=0
+. replace data_monitoring=0 if data_monitor=="Strongly Disagree"
+. replace data_monitoring=0.25 if data_monitor=="Disagre"
+. replace data_monitoring=0.5 if data_monitor=="Neutral"
+. replace data_monitoring=0.75 if data_monitor=="Agree"
+. replace data_monitoring=1 if data_monitor=="Strongly Agree"
+
+*Conducts formal case reviews for quality
+tabulate case_reviews
+tabulate case_reviews_freq
+. gen case_quality=0
+. replace case_quality=0 if case_reviews=="No"
+. replace case_quality=0.25 if case_reviews_freq=="Never/less than quarterly"
+. replace case_quality=0.5 if case_reviews_freq=="At least quarterly"
+. replace case_quality=0.75 if case_reviews_freq=="Monthly"
+. replace case_quality=1 if case_reviews_freq=="Weeky"
+
+*Regularly receives reports tracking common conditions with results shared with staff
+tabulate  res_shared
+tabulate  res_shared_tools
+. gen res_conditions=0
+. replace res_conditions=0 if res_shared=="No"
+. replace res_conditions=0.33 if res_shared_tools=="One tool used"
+. replace res_conditions=0.66 if res_shared_tools=="Two tools used"
+. replace res_conditions=1 if res_shared_tools=="All three tools used"
+
+. egen domain_monitoring= rowtotal (assignment_likert ideas_likert audit_meeting data_outbreak data_monitoring case_quality res_conditions)
+
+*Score of the domain
+. gen domain_active_monitoring=domain_monitoring/7
+
+. format domain_active_monitoring %9.2f
+
+
+*CLIENT FEEDBACK AND IMPROVEMENT
+
+*Conducts quality improvement activities
+. gen qualy_improv=0
+. replace qualy_improv=1 if case_reviews=="Yes"
+. replace qualy_improv=0 if case_reviews=="No"
+tabulate qualy_improv
+
+*Reports client opinions using any available tool
+. gen client_opinion=0
+. replace client_opinion=1 if client_surveys=="Yes"
+. replace client_opinion=0 if client_surveys=="No"
+tabulate client_opinion
+
+*Made changes based in client opinion
+. gen client_changes=0
+. replace client_changes=1 if opinion_changes=="Yes"
+. replace client_changes=0 if opinion_changes=="No"
+tabulate client_changes
+
+. egen domain_client_feedback= rowtotal(client_change client_opinion  qualy_improv)
+
+*Score for the domain
+. gen domain_client_feed= domain_client_feedback/3
+. format domain_client_feed %9.2f
+
+*OPERATIONS AND FINANCING
+
+*Has comprehensive annual budget for running costs
+. gen facility_budget=0
+. replace facility_budget=1 if fac_budget_avail=="Yes"
+. replace facility_budget=0 if fac_budget_avail=="No"
+tabulate facility_budget
+
+*Proportion of time facility head spent on managerial activities the previous day
+*First converting tt_hours from string to numeric
+. destring tt_hours, replace ignore(",") 
+. destring tt_hours, replace force
+. egen manag_time=rowtotal(treating_patients verify_drugs op_budget_time sup_med_staff)
+. gen management_time=manag_time/tt_hours
+. replace management_time=1 if management_time>1
+summarize management_time
+
+*Maintains books to track revenue and expenditure 
+. gen revenue_reporting=0
+. replace revenue_reporting=1 if revenue_report=="Yes"
+. replace revenue_reporting=0 if revenue_report=="No"
+tabulate revenue_reporting
+
+. egen domain_operations= rowtotal(facility_budget management_time revenue_reporting)
+*Score of the domain
+. gen domain_operations_financing=domain_operations/3
+
+*SUPPORTIVE SUPERVISION AND TARGET SETTING
+
+*Has formal improvement targets to achieve service delivery
+. gen imprv_targets_num=0
+. replace imprv_targets_num=1 if imprv_targets=="Yes"
+. replace imprv_targets_num=0 if imprv_targets=="No"
+tabulate imprv_targets_num
+
+*Formal improvement targets for service delivery shared with staff
+. gen imprv_targets_shared_num=0
+. replace imprv_targets_shared_num=1 if imprv_targets_shared=="Yes"
+. replace imprv_targets_shared_num=0 if imprv_targets_shared=="No"
+tabulate imprv_targets_shared_num
+
+*Facility head has received any formal management training 
+. gen hfm_mngmnt_train_num=0
+. replace hfm_mngmnt_train_num=1 if hfm_mngmnt_train=="Yes"
+. replace hfm_mngmnt_train_num=0 if hfm_mngmnt_train=="No"
+tabulate hfm_mngmnt_train_num
+
+*Staff are offered training to improve their skills
+. gen hf_staff_trained_num=0
+. replace hf_staff_trained_num=1 if hf_staff_trained=="Yes"
+. replace hf_staff_trained_num=0 if hf_staff_trained=="No"
+tabulate hf_staff_trained_num
+
+*Supervisors have held individual meetings to review staff performance
+. gen hf_staff_appraisal_num=0
+. replace hf_staff_appraisal_num=1 if hf_staff_appraisal=="Yes"
+. replace hf_staff_appraisal_num=0 if hf_staff_appraisal=="No"
+tabulate hf_staff_appraisal_num
+
+*Has established criteria to evaluate staff performance 
+. gen hf_apprais_criteria_num=0
+. replace hf_apprais_criteria_num=1 if hf_apprais_criteria=="Yes"
+. replace hf_apprais_criteria_num=0 if hf_apprais_criteria=="No"
+tabulate hf_apprais_criteria_num
+
+*Has formal, supportive and continuous supervision system
+. gen sup_visit_num=0
+. replace sup_visit_num=0.33 if sup_visit=="Yes"
+. replace sup_visit_num=0 if sup_visit=="No"
+tabulate sup_visit_num
+
+. egen domain_support= rowtotal(imprv_targets_num imprv_targets_shared_num hfm_mngmnt_train_num hf_staff_trained_num hf_staff_appraisal_num hf_apprais_criteria_num sup_visit_num)
+
+*Score of the domain
+. gen domain_supportive=domain_support/7
+. format domain_supportive %9.2f
+
+*COMMUNITY ENGAGEMENT
+
+*Shared information on performance within the community in the past 12 months 
+. gen info_communication=0
+. replace info_communication=0 if info_comm=="No"
+. replace info_communication=0 if info_comm=="Don't Know"
+. replace info_communication=1 if info_comm=="Yes"
+tabulate info_communication
+
+*Has a community advisory board that meets regularly and follows up
+. gen cab_board=0
+. replace cab_board=0 if board_present=="No"
+. replace cab_board=0.5 if board_present=="Yes"
+tabulate cab_board
+
+*Has a community member regularly attending staff meetings
+. gen community_staff=0
+. replace community_staff=0 if comm_staff_meet=="No"
+. replace community_staff=0 if comm_staff_meet=="Don't Know"
+. replace community_staff=1 if comm_staff_meet=="Yes"
+tabulate community_staff
+
+. egen domain_community= rowtotal(info_communication cab_board community_staff)
+
+*Score of the domain
+. gen domain_community_engagement=domain_community/3
+. format domain_community_engagement %9.2f
+
+*TOTAL SCORE OF EACH FACILITY ACROSS THE DOMAINS
+. egen facility_scores=rowtotal(domain_active_monitoring domain_client_feed domain_operations_financing domain_supportive domain_community_engagement)
+. gen facility_score=facility_scores/5
+
+*Median and Interquartile range for the different domains across different facility characteristics.
+
+*facility type
+table facility_type, c(median domain_active_monitoring iqr domain_active_monitoring median domain_client_feed iqr domain_client_feed) format (%9.2f)
+table facility_type, c(median domain_operations_financing iqr domain_operations_financing median domain_supportive iqr domain_supportive) format (%9.2f)
+table facility_type, c(median domain_community_engagement iqr domain_community_engagement) format (%9.2f)
+
+*facility level 
+table facility_level, c(median domain_active_monitoring iqr domain_active_monitoring median domain_client_feed iqr domain_client_feed) format (%9.2f)
+table facility_level, c(median domain_operations_financing iqr domain_operations_financing median domain_supportive iqr domain_supportive) format (%9.2f)
+table facility_level, c(median domain_community_engagement iqr domain_community_engagement) format (%9.2f)
+
+*facility location
+table facility_location, c(median domain_active_monitoring iqr domain_active_monitoring median domain_client_feed iqr domain_client_feed) format (%9.2f)
+table facility_location, c(median domain_operations_financing iqr domain_operations_financing median domain_supportive iqr domain_supportive) format (%9.2f)
+table facility_location, c(median domain_community_engagement iqr domain_community_engagement) format (%9.2f)
+
+*facility ownership
+table hcf_ownership, c(median domain_active_monitoring iqr domain_active_monitoring median domain_client_feed iqr domain_client_feed) format (%9.2f)
+table hcf_ownership, c(median domain_operations_financing iqr domain_operations_financing median domain_supportive iqr domain_supportive) format (%9.2f)
+table hcf_ownership, c(median domain_community_engagement iqr domain_community_engagement) format (%9.2f)
+
+*County
+table county, c(median domain_active_monitoring iqr domain_active_monitoring median domain_client_feed iqr domain_client_feed) format (%9.2f)
+table county, c(median domain_operations_financing iqr domain_operations_financing median domain_supportive iqr domain_supportive) format (%9.2f)
+table county, c(median domain_community_engagement iqr domain_community_engagement) format (%9.2f)
+
+*Mean and Median facility scores across different facility characteristics.
+table facility_type, c(mean facility_score sd facility_score median facility_score) format (%9.2f)
+table facility_level, c(mean facility_score sd facility_score median facility_score) format (%9.2f)
+table facility_location, c(mean facility_score sd facility_score median facility_score) format (%9.2f)
+table hcf_ownership, c(mean facility_score sd facility_score median facility_score) format (%9.2f)
+table county, c(mean facility_score sd facility_score median facility_score) format (%9.2f)
+
+*VISUALIZATION
+
+*Tables
+graph bar facility_score, over(facility_type) title("Facility Score across Facility Type") ylabel(0(0.1)1)
+graph bar facility_score, over(facility_level) title("Facility Score across Facility Level") ylabel(0(0.1)1)
+graph bar facility_score, over(facility_location) title("Facility Score across Facility Location") ylabel(0(0.1)1)
+graph bar facility_score, over(hcf_ownership) title("Facility Score across Facility Ownership") ylabel(0(0.1)1)
+graph bar facility_score, over(county) title("Facility Score across Counties") ylabel(0(0.1)1)
+
+*Domain Averages
+summarize domain_active_monitoring, detail
+summarize domain_client_feed, detail
+summarize domain_operations_financing, detail
+summarize domain_supportive, detail
+summarize domain_community_engagement, detail
+summarize facility_score, detail
+
+*Boxplots
+graph box facility_score, over(facility_type)
+graph box facility_score, over(facility_level)
+graph box facility_score, over(facility_location)
+graph box facility_score, over(hcf_ownership)
+graph box facility_score, over(county)
+
+*CONFIDENCE INTERVALS
+
+*95% CI Median for facility scores and individual domain scores across different facility level and location
+
+*95CIs for Level II
+preserve
+keep if facility_level=="Level II"
+bootstrap r(p50),reps(1000):summarize domain_active_monitoring,detail
+bootstrap r(p50),reps(1000):summarize domain_client_feed,detail
+bootstrap r(p50),reps(1000):summarize domain_operations_financing,detail
+bootstrap r(p50),reps(1000):summarize domain_supportive,detail
+bootstrap r(p50),reps(1000):summarize domain_community_engagement,detail
+bootstrap r(p50),reps(1000):summarize facility_score,detail
+restore
+
+*95% CI for Level III
+preserve
+keep if facility_level=="Level III"
+bootstrap r(p50),reps(1000):summarize domain_active_monitoring,detail
+bootstrap r(p50),reps(1000):summarize domain_client_feed,detail
+bootstrap r(p50),reps(1000):summarize domain_operations_financing,detail
+bootstrap r(p50),reps(1000):summarize domain_supportive,detail
+bootstrap r(p50),reps(1000):summarize domain_community_engagement,detail
+bootstrap r(p50),reps(1000):summarize facility_score,detail
+restore
+
+*95% CI for Level IV
+preserve
+keep if facility_level=="Level IV"
+bootstrap r(p50),reps(1000):summarize domain_active_monitoring,detail
+bootstrap r(p50),reps(1000):summarize domain_client_feed,detail
+bootstrap r(p50),reps(1000):summarize domain_operations_financing,detail
+bootstrap r(p50),reps(1000):summarize domain_supportive,detail
+bootstrap r(p50),reps(1000):summarize domain_community_engagement,detail
+bootstrap r(p50),reps(1000):summarize facility_score,detail
+restore
+
+*95% CI for Level V
+preserve
+keep if facility_level=="Level V"
+bootstrap r(p50),reps(1000):summarize domain_active_monitoring,detail
+bootstrap r(p50),reps(1000):summarize domain_client_feed,detail
+bootstrap r(p50),reps(1000):summarize domain_operations_financing,detail
+bootstrap r(p50),reps(1000):summarize domain_supportive,detail
+bootstrap r(p50),reps(1000):summarize domain_community_engagement,detail
+bootstrap r(p50),reps(1000):summarize facility_score,detail
+restore
+
+*95% CI for Rural Facilities
+preserve
+keep if facility_location=="Rural"
+bootstrap r(p50),reps(1000):summarize domain_active_monitoring,detail
+bootstrap r(p50),reps(1000):summarize domain_client_feed,detail
+bootstrap r(p50),reps(1000):summarize domain_operations_financing,detail
+bootstrap r(p50),reps(1000):summarize domain_supportive,detail
+bootstrap r(p50),reps(1000):summarize domain_community_engagement,detail
+bootstrap r(p50),reps(1000):summarize facility_score,detail
+restore
+
+*95% CI for Urban Facilities
+preserve
+keep if facility_location=="Urban"
+bootstrap r(p50),reps(1000):summarize domain_active_monitoring,detail
+bootstrap r(p50),reps(1000):summarize domain_client_feed,detail
+bootstrap r(p50),reps(1000):summarize domain_operations_financing,detail
+bootstrap r(p50),reps(1000):summarize domain_supportive,detail
+bootstrap r(p50),reps(1000):summarize domain_community_engagement,detail
+bootstrap r(p50),reps(1000):summarize facility_score,detail
+restore
+
+
+*PROPORTION OF FEMALES 
+
+*Proportion of females in the health management team
+gen females_proportion_hmt=hmt_num_fem/hmt_num
+replace females_proportion_hmt=0 if missing(females_proportion_hmt)
+replace females_proportion_hmt =1 if females_proportion_hmt>1
+summarize females_proportion_hmt
+
+*Proportion of females in the facility board
+gen females_proportion_fboard=fboard_comm_f/fboard_comm
+replace females_proportion_fboard=0 if missing(females_proportion_fboard)
+replace females_proportion_fboard =1 if females_proportion_fboard>1
+summarize females_proportion_fboard 
+
+*Proportion of females in the expenditure committee
+gen females_proportion_exp=exp_members_f/exp_members
+replace females_proportion_exp=0 if missing(females_proportion_exp)
+replace females_proportion_exp =1 if females_proportion_exp>1
+summarize females_proportion_exp
+
+*Female Chair to the facility board
+gen fboard_chair_female=.
+replace fboard_chair_female=1 if fboard_chair_gender=="Female"
+replace fboard_chair_female=0 if fboard_chair_gender=="Male"
+
+*Drop other unused variables 
+keep facility_type facility_level facility_location hcf_ownership county pop_served nhif_contract assignment_likert assignments new_ideas ideas_likert audit_meeting audit_meet data_outbreak data_coll_method data_monitoring data_monitor case_quality case_reviews res_conditions res_shared res_shared_tools domain_monitoring domain_active_monitoring qualy_improv case_reviews client_opinion client_surveys client_changes opinion_changes domain_client_feedback domain_client_feed facility_budget fac_budget_avail treating_patients verify_drugs op_budget_time sup_med_staff tt_hours manag_time management_time revenue_reporting revenue_report domain_operations domain_operations_financing imprv_targets_num imprv_targets imprv_targets_shared_num imprv_targets_shared hfm_mngmnt_train_num hfm_mngmnt_train hf_staff_trained_num hf_staff_trained hf_staff_appraisal_num hf_staff_appraisal hf_apprais_criteria_num hf_apprais_criteria sup_visit_num sup_visit domain_support domain_supportive info_communication info_comm cab_board board_present community_staff comm_staff_meet domain_community domain_community_engagement facility_scores facility_score inpatient_beds hcf_manager_sex fboard_chair_gender fboard_chair_female hmt_num hmt_num_fem females_proportion_hmt fboard_comm fboard_comm_f females_proportion_fboard exp_members exp_members_f females_proportion_exp
+
+*Code for de_identifying counties - "***" --- masked
+replace county="county 1" if county=="***"
+replace county="county 2" if county=="***"
+replace county="county 3" if county=="***"
+replace county="county 4" if county=="***"
+replace county="county 5" if county=="***"
+replace county="county 6" if county=="***"
+replace county="county 7" if county=="***"
+replace county="county 8" if county=="***"
+replace county="county 9" if county=="***"
+replace county="county 10" if county=="***"
+replace county="county 11" if county=="***"
+replace county="county 12" if county=="***"
+replace county="county 13" if county=="***"
+replace county="county 14" if county=="***"
+replace county="county 15" if county=="***"
+
+*Cleaning the variable inpatient beds
+ replace inpatient_beds =. if inpatient_beds ==99
+ replace inpatient_beds =. if inpatient_beds ==999
+ replace inpatient_beds =. if inpatient_beds ==9999
+ replace inpatient_beds =. if inpatient_beds ==99999
+ replace inpatient_beds =. if inpatient_beds ==999999
+ replace inpatient_beds =. if inpatient_beds ==9999999
+ replace inpatient_beds =. if inpatient_beds ==99999999
+ replace inpatient_beds =. if inpatient_beds ==999999999
+ replace inpatient_beds =. if inpatient_beds ==9999999999
+
+
+********END OF DO FILE ********
+
