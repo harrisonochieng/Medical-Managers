@@ -1,0 +1,137 @@
+########################### START OF DO FILE ##########################
+#Instaliing the necessary packages
+install.packages("broom.helpers")
+install.packages("haven")
+install.packages("lme4")
+install.packages("lmerTest")
+install.packages("gtsummary")
+install.packages("tidyverse")
+installed.packages("cardx")
+install.packages("broom.mixed")
+install.packages("parameters")
+install.packages("officer")
+install.packages("officer")
+install.packages("car")
+install.packages("flextable")
+
+
+#Loading the associated libraries 
+library(broom.helpers)
+library(haven)
+library(lme4)
+library(lmerTest)
+library(gtsummary)
+library(tidyverse)
+library(cardx)
+library(broom.mixed)
+library(parameters)
+library(officer)
+library(flextable)
+library(car)
+
+
+#Loading the facility data 
+facility_data=read_dta("C:\\Users\\ADMIN\\Downloads\\HFA with Keep only.dta")
+facility_data[is.na(facility_data)]=0 #Replacing missing values with Zero.
+
+
+#Ordering Facility Manager Gender 
+facility_data<-facility_data %>% 
+  mutate(hcf_manager_sex=if_else(hcf_manager_sex=="",NA_character_,hcf_manager_sex),
+         hcf_manager_sex=as.factor(hcf_manager_sex),
+         hcf_manager_sex=relevel(hcf_manager_sex,ref="Male"))
+
+
+#Inpatient bed capacity was widely distributed hence decided to categorize into four groups
+
+facility_data <- facility_data %>%
+  mutate(inpatient_capacity = case_when(
+    inpatient_beds == 0 ~ "Outpatient Only",
+    inpatient_beds > 0 & inpatient_beds < 100 ~ "1-100 beds",
+    inpatient_beds >= 100 & inpatient_beds < 200 ~ "100-200 beds",
+    inpatient_beds >= 200 ~ "Above 200 beds"
+  )) %>%
+  mutate(inpatient_capacity = factor(inpatient_capacity),
+         inpatient_capacity = relevel(inpatient_capacity, ref = "Outpatient Only"))
+
+
+#Univariate regression 
+Univar= tbl_uvregression(data=facility_data,method = lmer,y=facility_score,
+                         include = c("hcf_manager_sex","fboard_chair_female","females_proportion_hmt","females_proportion_fboard","females_proportion_exp",'facility_level',"facility_location","sup_visit","inpatient_capacity"),
+                         pvalue_fun = function(x) style_pvalue(x,digits = 2),
+                         formula = "{y}~{x}+(1|county)",
+                         label = list('hcf_manager_sex'="Gender of facility manager",'fboard_chair_female'="Gender of Facility Board Chair",'females_proportion_hmt'="Proportion of Females in the HMT",'females_proportion_fboard'="Proportion of females in the Facility Board",'females_proportion_exp'="Proportion of females in the expenditure committee",'facility_level'="Facility level",'facility_location'="Facility Location",'sup_visit'="Supervision Visits",'inpatient_capacity'="Inpatient_capacity"))
+print(Univar)
+#Stepwise Model
+
+fmodel=lmer(facility_score~hcf_manager_sex+fboard_chair_female+females_proportion_hmt+females_proportion_fboard+females_proportion_exp+facility_level+facility_location+sup_visit+inpatient_capacity+(1|county),data = facility_data)
+
+
+#Stepwise regression using LmerTest package which is suited for linear mixed effects regression
+fmodel_step=step(fmodel,
+                 ddf = "Satterthwaite",
+                 alpha.fixed = 0.10)
+print(fmodel_step)
+
+
+# #Model found:
+# facility_score ~ hcf_manager_sex + females_proportion_hmt + females_proportion_fboard + females_proportion_exp + facility_level + sup_visit + (1 | county)
+# 
+#Eliminates the variables in a backward fashion based on the provided p value cutoff. The final model is similar as the one in drop(1)
+F_Model=lmer(facility_score ~ hcf_manager_sex + females_proportion_hmt + females_proportion_fboard + females_proportion_exp + facility_level + sup_visit + (1 | county),data = facility_data)
+
+#Tables
+Multi_regression=tbl_regression(
+  F_Model,
+  label = list('hcf_manager_sex'="Gender of facility manager",'fboard_chair_female'="Gender of Facility Board Chair",'females_proportion_hmt'="Proportion of Females in the HMT",'females_proportion_fboard'="Proportion of females in the Facility Board",'females_proportion_exp'="Proportion of females in the expenditure committee",'facility_level'="Facility level",'facility_location'="Facility Location",'sup_visit'="Supervision Visits",'inpatient_capacity'="Inpatient_capacity")
+)
+
+print(Multi_regression)
+
+Table1=tbl_merge(
+  tbls = list(Univar,Multi_regression),
+  tab_spanner = c("**Univariate**","**Multivariable**")
+)
+
+
+library(officer)
+library(flextable)
+# 
+# 
+Table2=as_flex_table(Table1)
+# 
+# 
+## 
+Table3=read_docx() %>%
+  body_add_flextable(Table2) %>%
+  body_add_par("", style = "Normal")
+# 
+# 
+print(Table3, target = "Regression_Table_4.docx")
+
+#VIF to check for Multicollinearity
+vif(F_Model)
+vif_tab=vif(F_Model)
+print(vif_tab)
+
+#Histogram of residuals to check for multivariate normality
+residuals=residuals(F_Model)
+residuals_histogram=hist(residuals,probability = TRUE,
+                         main = "Histogram of Residuals with Normal Curve", 
+                         xlab = "Residuals", 
+                         col = "lightblue", 
+                         border = "black", 
+                         breaks = 30)
+                          
+                    
+#Scatterplot of residuals and fitted values to check for Homoscedasticity
+fitted_values=fitted(F_Model)
+scatterplot_fitted=plot(residuals,fitted_values,
+                        main = "Scatterplot of residuals and fitted values",
+                        xlab = "Residuals",
+                        ylab = "Fitted Values",
+                        col ="blue",
+                        pch =16)
+
+###########################END OF DO FILE ##########################
+
